@@ -5,6 +5,10 @@ from firebase_admin import messaging
 def send_fcm_notification(tokens, title, body, image_url, data):
     """Send FCM notification to multiple devices with high priority settings."""
     try:
+        if not tokens:
+            print("ℹ️ No tokens to send.")
+            return
+
         # Message configuration, including high-priority settings
         msg = messaging.MulticastMessage(
             notification=messaging.Notification(
@@ -27,6 +31,19 @@ def send_fcm_notification(tokens, title, body, image_url, data):
         # New function for v7+: send_each_for_multicast
         response = messaging.send_each_for_multicast(msg)
         print(f"✅ Sent {response.success_count} notifications. Errors: {response.failure_count}")
+
+        if response.failure_count:
+            for index, result in enumerate(response.responses):
+                if result.success:
+                    continue
+
+                token = tokens[index] if index < len(tokens) else "<unknown-token>"
+                error = result.exception
+                print(
+                    f"❌ FCM token failed: token={token}, "
+                    f"code={getattr(error, 'code', 'unknown')}, "
+                    f"message={error}"
+                )
 
     except Exception as e:
         print(f"❌ FCM Sending Error: {e}")
