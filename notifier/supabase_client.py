@@ -22,29 +22,30 @@ def get_tokens_for_fight(url, headers, fight_id):
 
 
 def get_fight_result_details(url, headers, fight_id):
-    """Get fight result details including winner, loser, and winner image."""
-    query = f"{url}/rest/v1/participants?select=result,fighters(name,image_url)&fight_id=eq.{fight_id}"
+    """Get fight result details including winner and loser."""
+    query = f"{url}/rest/v1/participants?select=result,fighters(name)&fight_id=eq.{fight_id}"
     res = requests.get(query, headers=headers)
     if res.status_code == 200:
         parts = res.json()
-        w_name, l_name, w_img = None, None, None
+        w_name, l_name = None, None
         for p in parts:
             res_val = str(p.get('result', '')).lower()
             if 'win' in res_val or res_val == 'w':
                 w_name = p['fighters']['name']
-                w_img = p['fighters']['image_url']
             else:
                 l_name = p['fighters']['name']
-        return w_name, l_name, w_img
-    return None, None, None
+        return w_name, l_name
+    return None, None
 
 
 def get_fight_matchup_names(url, headers, fight_id):
     """Get fighter names for the matchup."""
-    query = f"{url}/rest/v1/participants?select=fighters(name)&fight_id=eq.{fight_id}"
+    query = f"{url}/rest/v1/participants?select=is_red_corner,fighters(name)&fight_id=eq.{fight_id}"
     res = requests.get(query, headers=headers)
     if res.status_code == 200:
-        names = [p['fighters']['name'] for p in res.json()]
+        participants = res.json()
+        participants_sorted = sorted(participants, key=lambda p: not bool(p.get('is_red_corner')))
+        names = [p['fighters']['name'] for p in participants_sorted if p.get('fighters') and p['fighters'].get('name')]
         if len(names) >= 2:
             return f"{names[0]} vs {names[1]}"
     return "Upcoming Match"

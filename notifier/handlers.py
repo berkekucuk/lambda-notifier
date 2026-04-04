@@ -16,20 +16,20 @@ def handle_fight_result(supabase_url, headers, fight_data):
     current_tokens = get_tokens_for_fight(supabase_url, headers, fight_id)
 
     if current_tokens:
-        winner, loser, winner_img = get_fight_result_details(supabase_url, headers, fight_id)
+        winner, loser = get_fight_result_details(supabase_url, headers, fight_id)
 
         m_type = fight_data.get('method_type', 'Decision')
         m_detail = fight_data.get('method_detail', '')
         method_str = f"{m_type} - {m_detail}" if m_detail else m_type
 
         title = f"{winner} defeated {loser}" if winner and loser else "Fight Concluded! 🥊"
-        message = f"Result: {method_str}"
+        message = f"by {method_str}"
 
         send_fcm_notification(
             tokens=current_tokens,
             title=title,
             body=message,
-            image_url=winner_img,
+            image_url=None,
             data={"fight_id": fight_id, "type": "RESULT"}
         )
 
@@ -38,7 +38,6 @@ def handle_next_fight_starting(supabase_url, headers, fight_data):
     """
     Scenario 2: Send notification when the next fight is starting with fighter names.
     """
-    fight_id = fight_data.get('fight_id')
     event_id = fight_data.get('event_id')
     current_order = fight_data.get('fight_order')
 
