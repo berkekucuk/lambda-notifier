@@ -2,6 +2,17 @@
 from firebase_admin import messaging
 
 
+def mask_token(token):
+    """Return a partially masked token for logging."""
+    if not token:
+        return "<empty-token>"
+
+    if len(token) <= 10:
+        return f"{token[:2]}***{token[-2:]}"
+
+    return f"{token[:6]}***{token[-4:]}"
+
+
 def send_fcm_notification(tokens, title, body, image_url, data):
     """Send FCM notification to multiple devices with high priority settings."""
     try:
@@ -40,7 +51,7 @@ def send_fcm_notification(tokens, title, body, image_url, data):
                 token = tokens[index] if index < len(tokens) else "<unknown-token>"
                 error = result.exception
                 print(
-                    f"❌ FCM token failed: token={token}, "
+                    f"❌ FCM token failed: token={mask_token(token)}, "
                     f"code={getattr(error, 'code', 'unknown')}, "
                     f"message={error}"
                 )
