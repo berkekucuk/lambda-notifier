@@ -1,4 +1,5 @@
 """Event handlers for fight notifications."""
+import time
 from .supabase_client import (
     get_tokens_for_fight,
     get_fight_result_details,
@@ -16,14 +17,32 @@ def handle_fight_result(supabase_url, headers, fight_data):
     current_tokens = get_tokens_for_fight(supabase_url, headers, fight_id)
 
     if current_tokens:
-        winner, loser = get_fight_result_details(supabase_url, headers, fight_id)
+        f1_name, f2_name, result = get_fight_result_details(supabase_url, headers, fight_id)
 
-        m_type = fight_data.get('method_type', 'Decision')
-        m_detail = fight_data.get('method_detail', '')
-        method_str = f"{m_type} - {m_detail}" if m_detail else m_type
+        # RETRY LOGIC: If result_type is not found, it might be due to a race condition with the scraper.
+        # We wait for 2 seconds and try one more time.
+        if not result:
+            print(f"⚠️ Result data not ready for fight {fight_id}. Retrying in 2 seconds...")
+            time.sleep(2)
+            f1_name, f2_name, result = get_fight_result_details(supabase_url, headers, fight_id)
 
-        title = f"{winner} defeated {loser}" if winner and loser else "Fight Concluded! 🥊"
-        message = f"by {method_str}"
+        method_type = fight_data.get('method_type', 'Decision')
+        method_detail = fight_data.get('method_detail', '')
+        method_str = f"{method_type} - {method_detail}" if method_detail else method_type
+
+        # Customize title/body based on result type
+        if result == "DRAW":
+            title = f"Draw: {f1_name} vs {f2_name} 🤝"
+            message = f"Result: {method_str}"
+        elif result == "NC":
+            title = f"No Contest: {f1_name} vs {f2_name} 🚫"
+            message = f"Result: {method_str}"
+        elif result == "WIN":
+            title = f"{f1_name} defeated {f2_name} 🏆"
+            message = f"by {method_str}"
+        else:
+            title = "Fight Concluded! 🥊"
+            message = f"Method: {method_str}"
 
         send_fcm_notification(
             tokens=current_tokens,

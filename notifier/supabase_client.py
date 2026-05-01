@@ -22,20 +22,47 @@ def get_tokens_for_fight(url, headers, fight_id):
 
 
 def get_fight_result_details(url, headers, fight_id):
-    """Get fight result details including winner and loser."""
-    query = f"{url}/rest/v1/participants?select=result,fighters(name)&fight_id=eq.{fight_id}"
+    """Get fight result details including winner and loser or draw status."""
+    query = f"{url}/rest/v1/participants?select=result,is_red_corner,fighters(name)&fight_id=eq.{fight_id}"
     res = requests.get(query, headers=headers)
     if res.status_code == 200:
         parts = res.json()
-        w_name, l_name = None, None
+        if not parts:
+            return None, None, None
+
+        winner = None
+        red_name = "Unknown"
+        blue_name = "Unknown"
+        is_draw = False
+        is_nc = False
+
         for p in parts:
-            res_val = str(p.get('result', '')).lower()
-            if 'win' in res_val or res_val == 'w':
-                w_name = p['fighters']['name']
+            name = p.get('fighters', {}).get('name', 'Unknown')
+            if p.get('is_red_corner'):
+                red_name = name
             else:
-                l_name = p['fighters']['name']
-        return w_name, l_name
-    return None, None
+                blue_name = name
+                
+            res_val = str(p.get('result', '')).lower()
+            
+            if res_val == 'win' or res_val == 'w':
+                winner = name
+            elif 'draw' in res_val:
+                is_draw = True
+            elif 'no_contest' in res_val or 'nc' in res_val:
+                is_nc = True
+
+        if is_draw:
+            return red_name, blue_name, "DRAW"
+        
+        if is_nc:
+            return red_name, blue_name, "NC"
+
+        if winner:
+            loser = blue_name if winner == red_name else red_name
+            return winner, loser, "WIN"
+
+    return None, None, None
 
 
 def get_fight_matchup_names(url, headers, fight_id):
