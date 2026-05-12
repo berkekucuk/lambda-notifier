@@ -6,14 +6,32 @@ from firebase_admin import credentials
 
 
 def initialize_firebase():
-    """Initialize Firebase Admin SDK if not already initialized."""
-    if not firebase_admin._apps:
+    """Initialize Firebase Admin SDK using the professional method."""
+    try:
+        firebase_admin.get_app()
+
+    except ValueError:
         try:
-            cred_json = json.loads(os.environ['FIREBASE_SERVICE_ACCOUNT'])
+            raw_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT', '').strip()
+
+            if not raw_json:
+                print("❌ ERROR: FIREBASE_SERVICE_ACCOUNT environment variable is empty!")
+                return
+
+            cred_json = json.loads(raw_json)
+
+            print(f"DEBUG: Lambda Project ID: {cred_json.get('project_id')}")
+            private_key = cred_json.get('private_key', '')
+            print(f"DEBUG: Private Key Prefix: {private_key[:30]}...")
+
             cred = credentials.Certificate(cred_json)
             firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK successfully initialized.")
+
+        except json.JSONDecodeError as je:
+            print(f"❌ JSON Format Error: Environment variable is not a valid JSON! {je}")
         except Exception as e:
-            print(f"❌ Firebase Initialization Error: {e}")
+            print(f"❌ Unexpected error during Firebase initialization: {e}")
 
 
 def get_supabase_config():
