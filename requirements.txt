@@ -1,2 +1,4 @@
 firebase-admin==7.4.0
-supabase==2.29.0
+supabase==2.30.0
+httpx[http2]==0.28.1
+PyJWT==2.12.1

@@ -11,7 +11,18 @@ class SupabaseManager:
         res = self.client.rpc('get_tokens_by_fight', {'p_fight_id': fight_id}) \
             .range(0, 4999) \
             .execute()
-        return [t['fcm_token'] for t in res.data] if res.data else []
+        tokens = {'android': [], 'ios': []}
+        if res.data:
+            for t in res.data:
+                token = t.get('fcm_token')
+                platform = str(t.get('platform', '')).lower()
+                if not token:
+                    continue
+                if platform == 'ios':
+                    tokens['ios'].append(token)
+                else:
+                    tokens['android'].append(token)
+        return tokens
 
     def get_fight_result_details(self, fight_id):
         """Get fight result details including winner and loser or draw status."""

@@ -286,3 +286,5 @@ Thumbs.db
 
 # Project configuration
 pyproject.toml
+
+run_local.py
